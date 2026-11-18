@@ -14,7 +14,7 @@ from telebot import types
 # ==========================================
 # CONFIGURATION
 # ==========================================
-BOT_TOKEN = "8677868565:AAEm_q6UNYr_mqStJFyms1sHrBfwOSicjV8"  
+BOT_TOKEN = "9189127227:AAHlU7NodYF6yrW6jc93PM6hPDXmL68WjTo"  
 UPI_ID = "8016922924@ibl"                    
 ADMIN_PASSWORD = "743405"                   
 DEVELOPER_USERNAME = "@ai_brain_box_2"      
@@ -447,7 +447,7 @@ def deliver_product_file(chat_id, prod_name, file_type, file_value, file_name, t
 
 
 # ==========================================
-# MAIN TEXT HANDLER (ALL LANGUAGES)
+# MAIN TEXT HANDLER
 # ==========================================
 @bot.message_handler(content_types=["text"])
 def handle_text(message):
@@ -455,7 +455,6 @@ def handle_text(message):
     text = message.text.strip()
     register_or_update_user(message.from_user)
 
-    # Universal Language Button Check across all 3 languages
     if text in [LANGS["en"]["lang_btn"], LANGS["hi"]["lang_btn"], LANGS["bn"]["lang_btn"]]:
         clear_state(user_id)
         kb = types.InlineKeyboardMarkup()
@@ -467,7 +466,6 @@ def handle_text(message):
         bot.send_message(message.chat.id, get_txt(user_id, "choose_lang"), reply_markup=kb)
         return
 
-    # Check menu selections dynamically based on any active language
     is_free = text in [LANGS["en"]["free_prod"], LANGS["hi"]["free_prod"], LANGS["bn"]["free_prod"]]
     is_paid = text in [LANGS["en"]["paid_prod"], LANGS["hi"]["paid_prod"], LANGS["bn"]["paid_prod"]]
     is_raffle = text in [LANGS["en"]["raffle"], LANGS["hi"]["raffle"], LANGS["bn"]["raffle"]]
@@ -562,7 +560,6 @@ def handle_text(message):
         clear_state(user_id)
         start_qr_payment_session(message.chat.id, user_id, amount)
 
-    # Admin Add Product
     elif state == "adm_prod_name":
         data["name"] = text
         st["state"] = "adm_prod_desc"
@@ -601,7 +598,6 @@ def handle_text(message):
         kb.add(types.InlineKeyboardButton("⏭ Skip Tutorial", callback_data="skip_step_tut"))
         bot.send_message(message.chat.id, "🎬 এখন <b>Tutorial Video</b> আপলোড করুন অথবা ভিডিও লিংক দিন (অথবা স্কিপ করুন):", reply_markup=kb)
 
-    # Admin Edit Product
     elif state == "adm_edit_name":
         pid = data["pid"]
         with db_lock:
@@ -649,7 +645,6 @@ def handle_text(message):
         clear_state(user_id)
         bot.send_message(message.chat.id, "✅ Tutorial আপডেট হয়েছে!", reply_markup=admin_menu_keyboard())
 
-    # Admin Send Bonus
     elif state == "adm_bonus_target":
         target = text.strip()
         if target.upper() != "ALL":
@@ -709,7 +704,6 @@ def handle_text(message):
 
         bot.send_message(message.chat.id, f"✅ বোনাস পাঠানো সম্পন্ন! ({sent} জন ইউজারকে নোটিফিকেশন দেওয়া হয়েছে)", reply_markup=admin_menu_keyboard())
 
-    # Admin Broadcast with Statistics
     elif state == "adm_broadcast":
         clear_state(user_id)
         with db_lock:
@@ -802,7 +796,6 @@ def handle_photo(message):
             bot.send_message(message.chat.id, report, reply_markup=admin_menu_keyboard())
             return
 
-    # QR Payment Screenshot Processing
     qrs = qr_sessions.get(user_id)
     if qrs and qrs.get("active"):
         if time.time() > qrs["expires_at"]:
@@ -1563,4 +1556,6 @@ def run_web_server():
 if __name__ == "__main__":
     threading.Thread(target=run_web_server, daemon=True).start()
     print("Bot is running...")
-    bot.infinity_polling(timeout=60, long_polling_timeout=60)
+    
+    # Conflict 409 error fix: remove_webhook=True clears old pending updates automatically
+    bot.infinity_polling(timeout=60, long_polling_timeout=60, remove_webhook=True)
